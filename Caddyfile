@@ -1,0 +1,23 @@
+# Un solo origen: Caddy sirve el frontend estático y hace proxy de /api al backend.
+#
+# En un VPS con dominio propio, cambia ":80" por tu dominio (por ejemplo
+# "salon.ejemplo.mx") y publica los puertos 80 y 443; Caddy emite el certificado
+# TLS automáticamente con Let's Encrypt.
+:80 {
+	encode zstd gzip
+
+	handle /api/* {
+		reverse_proxy api:3000
+	}
+
+	handle {
+		root * /srv
+		try_files {path} {path}/index.html {path}.html /index.html
+		file_server
+	}
+
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+	}
+}

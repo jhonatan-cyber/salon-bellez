@@ -1,0 +1,509 @@
+---
+import AppLayout from '../../layouts/AppLayout.astro';
+
+const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+---
+
+<AppLayout titulo="Equipo" actual="equipo">
+  <section class="space-y-6">
+    <header>
+      <h1 class="text-2xl text-ciruela-oscuro">Equipo</h1>
+      <p class="text-sm text-tenue">
+        Estilistas, su horario semanal y los accesos al panel.
+      </p>
+    </header>
+
+    <p id="aviso" class="hidden rounded-xl bg-salvia/15 px-4 py-3 text-sm text-salvia"></p>
+    <p id="error" class="hidden rounded-xl bg-rosa/60 px-4 py-3 text-sm text-ciruela-oscuro"></p>
+
+    <div class="grid gap-5 lg:grid-cols-[1fr_1.2fr]">
+      <form class="card space-y-4" id="form-estilista">
+        <div class="flex items-center justify-between">
+          <h2 class="text-lg text-ciruela-oscuro" id="titulo-estilista">Nueva estilista</h2>
+          <button class="btn-texto hidden" type="button" id="cancelar-estilista">Cancelar</button>
+        </div>
+
+        <input type="hidden" id="estilista-id" />
+
+        <div>
+          <label class="etiqueta" for="estilista-nombre">Nombre</label>
+          <input class="campo" id="estilista-nombre" required minlength="2" />
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="etiqueta" for="estilista-telefono">Teléfono</label>
+            <input class="campo" id="estilista-telefono" inputmode="tel" />
+          </div>
+          <div>
+            <label class="etiqueta" for="estilista-color">Color en agenda</label>
+            <input class="campo h-[38px] py-1" id="estilista-color" type="color" value="#a855f7" />
+          </div>
+        </div>
+
+        <div data-solo-admin>
+          <label class="etiqueta" for="estilista-usuario">Usuario vinculado</label>
+          <select class="campo" id="estilista-usuario">
+            <option value="">Sin usuario</option>
+          </select>
+        </div>
+
+        <label class="flex items-center gap-2 text-sm">
+          <input type="checkbox" id="estilista-activo" checked /> Activa (aparece en la reserva pública)
+        </label>
+
+        <button class="btn-primario w-full" type="submit">Guardar estilista</button>
+      </form>
+
+      <div class="card overflow-x-auto">
+        <table class="w-full text-left text-sm">
+          <thead class="text-xs uppercase tracking-wide text-tenue">
+            <tr>
+              <th class="pb-2">Estilista</th>
+              <th class="pb-2">Estado</th>
+              <th class="pb-2"></th>
+            </tr>
+          </thead>
+          <tbody id="tabla-estilistas">
+            <tr><td colspan="3" class="py-3 text-tenue">Cargando…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="grid gap-5 lg:grid-cols-[1fr_1.2fr]">
+      <form class="card space-y-4" id="form-horario">
+        <h2 class="text-lg text-ciruela-oscuro">Agregar horario</h2>
+
+        <div>
+          <label class="etiqueta" for="horario-estilista">Estilista</label>
+          <select class="campo" id="horario-estilista" required></select>
+        </div>
+
+        <div class="grid grid-cols-3 gap-3">
+          <div>
+            <label class="etiqueta" for="horario-dia">Día</label>
+            <select class="campo" id="horario-dia">
+              {DIAS.map((dia, i) => <option value={i} selected={i === 1}>{dia}</option>)}
+            </select>
+          </div>
+          <div>
+            <label class="etiqueta" for="horario-inicio">Desde</label>
+            <input class="campo" id="horario-inicio" type="time" value="09:00" required />
+          </div>
+          <div>
+            <label class="etiqueta" for="horario-fin">Hasta</label>
+            <input class="campo" id="horario-fin" type="time" value="18:00" required />
+          </div>
+        </div>
+
+        <button class="btn-primario w-full" type="submit">Agregar al horario</button>
+        <p class="text-xs text-tenue">
+          Puedes registrar varias franjas el mismo día (por ejemplo, mañana y tarde).
+        </p>
+      </form>
+
+      <div class="card">
+        <h2 class="text-lg text-ciruela-oscuro" id="horario-titulo">Horario semanal</h2>
+        <ul class="mt-3 text-sm" id="lista-horarios"></ul>
+      </div>
+    </div>
+
+    <div data-solo-admin class="grid gap-5 lg:grid-cols-[1fr_1.2fr]">
+      <form class="card space-y-4" id="form-usuario">
+        <h2 class="text-lg text-ciruela-oscuro">Nuevo usuario</h2>
+
+        <div>
+          <label class="etiqueta" for="usuario-nombre">Nombre</label>
+          <input class="campo" id="usuario-nombre" required minlength="2" />
+        </div>
+
+        <div>
+          <label class="etiqueta" for="usuario-email">Correo</label>
+          <input class="campo" id="usuario-email" type="email" required />
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="etiqueta" for="usuario-rol">Rol</label>
+            <select class="campo" id="usuario-rol">
+              <option value="recepcionista">Recepcionista</option>
+              <option value="estilista">Estilista</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+          <div>
+            <label class="etiqueta" for="usuario-password">Contraseña</label>
+            <input class="campo" id="usuario-password" type="password" minlength="8" required />
+          </div>
+        </div>
+
+        <button class="btn-primario w-full" type="submit">Crear usuario</button>
+      </form>
+
+      <div class="card overflow-x-auto">
+        <table class="w-full text-left text-sm">
+          <thead class="text-xs uppercase tracking-wide text-tenue">
+            <tr>
+              <th class="pb-2">Usuario</th>
+              <th class="pb-2">Rol</th>
+              <th class="pb-2">Estado</th>
+              <th class="pb-2"></th>
+            </tr>
+          </thead>
+          <tbody id="tabla-usuarios">
+            <tr><td colspan="4" class="py-3 text-tenue">Cargando…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    import { api, type Estilista, type Horario, type Usuario } from '../../lib/api';
+    import { esc } from '../../lib/formato';
+    import { protegerPagina } from '../../lib/sesion';
+
+    const usuarioActual = await protegerPagina();
+    const esAdmin = usuarioActual?.rol === 'admin';
+    const puedeEditar = usuarioActual?.rol === 'admin' || usuarioActual?.rol === 'recepcionista';
+
+    const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+
+    const campo = <T extends HTMLElement>(id: string) => document.getElementById(id) as T | null;
+    const valor = (id: string) =>
+      (document.getElementById(id) as HTMLInputElement | HTMLSelectElement | null)?.value ?? '';
+    const marcar = (id: string, texto: string) => {
+      const input = document.getElementById(id) as HTMLInputElement | null;
+      if (input) input.value = texto;
+    };
+    const horaCorta = (hora: string) => hora.slice(0, 5);
+
+    const error = document.getElementById('error');
+    const aviso = document.getElementById('aviso');
+    const formEstilista = campo<HTMLFormElement>('form-estilista');
+    const formHorario = campo<HTMLFormElement>('form-horario');
+    const formUsuario = campo<HTMLFormElement>('form-usuario');
+    const tablaEstilistas = campo<HTMLTableSectionElement>('tabla-estilistas');
+    const tablaUsuarios = campo<HTMLTableSectionElement>('tabla-usuarios');
+    const listaHorarios = campo<HTMLUListElement>('lista-horarios');
+    const selectorEstilista = campo<HTMLSelectElement>('horario-estilista');
+    const selectorUsuario = campo<HTMLSelectElement>('estilista-usuario');
+    const tituloHorario = document.getElementById('horario-titulo');
+
+    let estilistas: Estilista[] = [];
+    let usuarios: Usuario[] = [];
+    let horarios: Horario[] = [];
+    let estilistaHorario = '';
+
+    function mensaje(tipo: 'error' | 'aviso', texto: string | null) {
+      const el = tipo === 'error' ? error : aviso;
+      if (!el) return;
+      el.textContent = texto ?? '';
+      el.classList.toggle('hidden', !texto);
+    }
+
+    function fallo(e: unknown, porDefecto: string) {
+      mensaje('error', e instanceof Error ? e.message : porDefecto);
+    }
+
+    // ---------- Usuarios (solo admin) ----------
+
+    async function cargarUsuarios() {
+      if (!esAdmin) return;
+      try {
+        usuarios = await api<Usuario[]>('/usuarios');
+      } catch (e) {
+        fallo(e, 'No se pudieron cargar los usuarios.');
+        return;
+      }
+
+      if (selectorUsuario) {
+        const vinculado = selectorUsuario.value;
+        selectorUsuario.innerHTML =
+          '<option value="">Sin usuario</option>' +
+          usuarios
+            .filter((u) => u.rol === 'estilista')
+            .map((u) => `<option value="${esc(u.id)}">${esc(u.nombre)}</option>`)
+            .join('');
+        selectorUsuario.value = vinculado;
+      }
+
+      if (!tablaUsuarios) return;
+      tablaUsuarios.innerHTML = usuarios
+        .map(
+          (u) => `
+        <tr class="border-t border-arena/70">
+          <td class="py-2">
+            <p class="font-medium">${esc(u.nombre)}</p>
+            <p class="text-xs text-tenue">${esc(u.email)}</p>
+          </td>
+          <td class="py-2 text-xs uppercase tracking-wide text-tenue">${esc(u.rol)}</td>
+          <td class="py-2">
+            <span class="insignia ${u.activo ? 'bg-salvia/15 text-salvia' : 'bg-arena text-tenue'}">
+              ${u.activo ? 'Activo' : 'Inactivo'}
+            </span>
+          </td>
+          <td class="py-2 text-right">
+            <button class="btn-texto" data-usuario="${esc(u.id)}" ${
+              u.id === usuarioActual?.id ? 'disabled' : ''
+            }>${u.activo ? 'Desactivar' : 'Activar'}</button>
+          </td>
+        </tr>`
+        )
+        .join('');
+
+      tablaUsuarios.querySelectorAll<HTMLButtonElement>('[data-usuario]').forEach((boton) => {
+        boton.addEventListener('click', async () => {
+          const usuario = usuarios.find((u) => u.id === boton.dataset.usuario);
+          if (!usuario) return;
+          mensaje('error', null);
+          try {
+            await api(`/usuarios/${usuario.id}/estado`, {
+              metodo: 'PATCH',
+              cuerpo: { activo: !usuario.activo },
+            });
+            mensaje('aviso', usuario.activo ? 'Usuario desactivado.' : 'Usuario activado.');
+            await cargarUsuarios();
+          } catch (e) {
+            fallo(e, 'No se pudo cambiar el estado del usuario.');
+          }
+        });
+      });
+    }
+
+    // ---------- Estilistas ----------
+
+    function limpiarEstilista() {
+      formEstilista?.reset();
+      marcar('estilista-id', '');
+      const titulo = document.getElementById('titulo-estilista');
+      if (titulo) titulo.textContent = 'Nueva estilista';
+      document.getElementById('cancelar-estilista')?.classList.add('hidden');
+    }
+
+    function editarEstilista(estilista: Estilista) {
+      marcar('estilista-id', estilista.id);
+      marcar('estilista-nombre', estilista.nombre);
+      marcar('estilista-telefono', estilista.telefono ?? '');
+      marcar('estilista-color', estilista.color);
+      if (selectorUsuario) selectorUsuario.value = estilista.usuario_id ?? '';
+      const activo = campo<HTMLInputElement>('estilista-activo');
+      if (activo) activo.checked = estilista.activo;
+      const titulo = document.getElementById('titulo-estilista');
+      if (titulo) titulo.textContent = 'Editar estilista';
+      document.getElementById('cancelar-estilista')?.classList.remove('hidden');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    async function cargarEstilistas() {
+      try {
+        estilistas = await api<Estilista[]>('/estilistas');
+      } catch (e) {
+        fallo(e, 'No se pudo cargar el equipo.');
+        return;
+      }
+
+      if (tablaEstilistas) {
+        tablaEstilistas.innerHTML =
+          estilistas
+            .map(
+              (e) => `
+          <tr class="border-t border-arena/70">
+            <td class="py-2">
+              <p class="flex items-center gap-2">
+                <span class="h-3 w-3 shrink-0 rounded-full" style="background:${esc(e.color)}"></span>
+                <span class="font-medium">${esc(e.nombre)}</span>
+              </p>
+              ${e.telefono ? `<p class="text-xs text-tenue">${esc(e.telefono)}</p>` : ''}
+            </td>
+            <td class="py-2">
+              <span class="insignia ${e.activo ? 'bg-salvia/15 text-salvia' : 'bg-arena text-tenue'}">
+                ${e.activo ? 'Activa' : 'Inactiva'}
+              </span>
+            </td>
+            <td class="whitespace-nowrap py-2 text-right">
+              <button class="btn-texto" data-editar="${esc(e.id)}" ${
+                puedeEditar ? '' : 'hidden'
+              }>Editar</button>
+              <button class="btn-texto" data-horario="${esc(e.id)}">Horarios</button>
+            </td>
+          </tr>`
+            )
+            .join('') ||
+          '<tr><td colspan="3" class="py-3 text-tenue">Todavía no hay estilistas.</td></tr>';
+
+        tablaEstilistas.querySelectorAll<HTMLButtonElement>('[data-editar]').forEach((boton) => {
+          boton.addEventListener('click', () => {
+            const estilista = estilistas.find((e) => e.id === boton.dataset.editar);
+            if (estilista) editarEstilista(estilista);
+          });
+        });
+
+        tablaEstilistas.querySelectorAll<HTMLButtonElement>('[data-horario]').forEach((boton) => {
+          boton.addEventListener('click', () => {
+            estilistaHorario = boton.dataset.horario ?? '';
+            if (selectorEstilista) selectorEstilista.value = estilistaHorario;
+            void cargarHorarios();
+            document.getElementById('horario-titulo')?.scrollIntoView({ behavior: 'smooth' });
+          });
+        });
+      }
+
+      if (selectorEstilista) {
+        selectorEstilista.innerHTML = estilistas
+          .map(
+            (e) =>
+              `<option value="${esc(e.id)}">${esc(e.nombre)}${e.activo ? '' : ' (inactiva)'}</option>`
+          )
+          .join('');
+        if (!estilistas.some((e) => e.id === estilistaHorario)) {
+          estilistaHorario = estilistas[0]?.id ?? '';
+        }
+        selectorEstilista.value = estilistaHorario;
+      }
+    }
+
+    // ---------- Horarios ----------
+
+    async function cargarHorarios() {
+      if (!listaHorarios) return;
+      const estilista = estilistas.find((e) => e.id === estilistaHorario);
+      if (tituloHorario) {
+        tituloHorario.textContent = estilista ? `Horario de ${estilista.nombre}` : 'Horario semanal';
+      }
+      if (!estilista) {
+        horarios = [];
+        listaHorarios.innerHTML = '<li class="py-2 text-tenue">Primero agrega una estilista.</li>';
+        return;
+      }
+
+      try {
+        horarios = await api<Horario[]>(`/estilistas/${estilista.id}/horarios`);
+      } catch (e) {
+        fallo(e, 'No se pudo cargar el horario.');
+        return;
+      }
+
+      listaHorarios.innerHTML =
+        horarios
+          .map(
+            (h) => `
+        <li class="flex items-center justify-between border-t border-arena/70 py-1.5">
+          <span>
+            <span class="font-medium">${esc(DIAS[h.dia_semana] ?? h.dia_semana)}</span>
+            <span class="text-tenue">· ${esc(horaCorta(h.hora_inicio))}–${esc(horaCorta(h.hora_fin))}</span>
+          </span>
+          <button class="btn-texto text-red-700" data-borrar-horario="${esc(h.id)}" ${
+            puedeEditar ? '' : 'hidden'
+          }>Quitar</button>
+        </li>`
+          )
+          .join('') ||
+        '<li class="py-2 text-tenue">Sin horarios: no aparecerá en la agenda ni en la reserva.</li>';
+
+      listaHorarios.querySelectorAll<HTMLButtonElement>('[data-borrar-horario]').forEach((boton) => {
+        boton.addEventListener('click', async () => {
+          if (!confirm('¿Quitar este horario?')) return;
+          try {
+            await api(`/horarios/${boton.dataset.borrarHorario}`, { metodo: 'DELETE' });
+            mensaje('aviso', 'Horario eliminado.');
+            await cargarHorarios();
+          } catch (e) {
+            fallo(e, 'No se pudo quitar el horario.');
+          }
+        });
+      });
+    }
+
+    // ---------- Eventos ----------
+
+    formEstilista?.addEventListener('submit', async (evento) => {
+      evento.preventDefault();
+      mensaje('error', null);
+      const id = valor('estilista-id');
+      const previo = estilistas.find((e) => e.id === id);
+      const cuerpo = {
+        nombre: valor('estilista-nombre').trim(),
+        telefono: valor('estilista-telefono').trim() || null,
+        color: valor('estilista-color') || '#a855f7',
+        activo: campo<HTMLInputElement>('estilista-activo')?.checked ?? true,
+        usuario_id: esAdmin ? valor('estilista-usuario') || null : (previo?.usuario_id ?? null),
+      };
+      try {
+        await api(id ? `/estilistas/${id}` : '/estilistas', {
+          metodo: id ? 'PUT' : 'POST',
+          cuerpo,
+        });
+        mensaje('aviso', id ? 'Estilista actualizada.' : 'Estilista agregada.');
+        limpiarEstilista();
+        await cargarEstilistas();
+        await cargarHorarios();
+      } catch (e) {
+        fallo(e, 'No se pudo guardar la estilista.');
+      }
+    });
+
+    document
+      .getElementById('cancelar-estilista')
+      ?.addEventListener('click', limpiarEstilista);
+
+    selectorEstilista?.addEventListener('change', () => {
+      estilistaHorario = selectorEstilista.value;
+      void cargarHorarios();
+    });
+
+    formHorario?.addEventListener('submit', async (evento) => {
+      evento.preventDefault();
+      mensaje('error', null);
+      if (!estilistaHorario) {
+        mensaje('error', 'Elige una estilista antes de agregar el horario.');
+        return;
+      }
+      try {
+        await api(`/estilistas/${estilistaHorario}/horarios`, {
+          metodo: 'POST',
+          cuerpo: {
+            dia_semana: Number(valor('horario-dia')),
+            hora_inicio: `${valor('horario-inicio')}:00`,
+            hora_fin: `${valor('horario-fin')}:00`,
+          },
+        });
+        mensaje('aviso', 'Horario agregado.');
+        await cargarHorarios();
+      } catch (e) {
+        fallo(e, 'No se pudo agregar el horario (revisa que el fin sea posterior al inicio).');
+      }
+    });
+
+    formUsuario?.addEventListener('submit', async (evento) => {
+      evento.preventDefault();
+      mensaje('error', null);
+      try {
+        await api('/usuarios', {
+          metodo: 'POST',
+          cuerpo: {
+            nombre: valor('usuario-nombre').trim(),
+            email: valor('usuario-email').trim(),
+            rol: valor('usuario-rol'),
+            password: valor('usuario-password'),
+          },
+        });
+        formUsuario.reset();
+        mensaje('aviso', 'Usuario creado.');
+        await cargarUsuarios();
+      } catch (e) {
+        fallo(e, 'No se pudo crear el usuario.');
+      }
+    });
+
+    if (!puedeEditar) {
+      formEstilista?.setAttribute('hidden', '');
+      formHorario?.setAttribute('hidden', '');
+    }
+
+    await cargarUsuarios();
+    await cargarEstilistas();
+    await cargarHorarios();
+  </script>
+</AppLayout>

@@ -1,0 +1,32 @@
+---
+import '../styles/global.css';
+
+interface Props {
+  titulo?: string;
+  descripcion?: string;
+}
+
+const {
+  titulo = 'Salón Aurora — Salón de belleza',
+  descripcion = 'Cortes, color y uñas en el corazón de la ciudad. Reserva tu cita en línea.',
+} = Astro.props;
+---
+
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{titulo}</title>
+    <meta name="description" content={descripcion} />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body class="min-h-screen bg-crema font-sans text-tinta antialiased">
+    <slot />
+  </body>
+</html>

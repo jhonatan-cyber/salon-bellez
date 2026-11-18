@@ -1,0 +1,78 @@
+---
+import '../styles/global.css';
+
+interface Props {
+  titulo: string;
+  actual: 'inicio' | 'agenda' | 'servicios' | 'clientes' | 'equipo' | 'caja';
+}
+
+const { titulo, actual } = Astro.props;
+
+const enlaces = [
+  { href: '/app/inicio', texto: 'Inicio', clave: 'inicio' },
+  { href: '/app/agenda', texto: 'Agenda', clave: 'agenda' },
+  { href: '/app/clientes', texto: 'Clientes', clave: 'clientes' },
+  { href: '/app/servicios', texto: 'Servicios', clave: 'servicios' },
+  { href: '/app/equipo', texto: 'Equipo', clave: 'equipo' },
+  { href: '/app/caja', texto: 'Caja', clave: 'caja' },
+];
+---
+
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{titulo} — Salón Aurora</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body class="min-h-screen bg-crema font-sans text-tinta antialiased">
+    <header class="border-b border-arena bg-white/80 no-imprimir">
+      <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-5 py-3">
+        <div class="flex items-center gap-6">
+          <a href="/app/inicio" class="font-display text-lg text-ciruela-oscuro">Salón Aurora</a>
+          <nav class="flex flex-wrap gap-1 text-sm">
+            {
+              enlaces.map((enlace) => (
+                <a
+                  href={enlace.href}
+                  class:list={[
+                    'rounded-full px-3 py-1.5 transition',
+                    actual === enlace.clave
+                      ? 'bg-ciruela text-crema'
+                      : 'text-tenue hover:bg-rosa/50 hover:text-ciruela',
+                  ]}
+                >
+                  {enlace.texto}
+                </a>
+              ))
+            }
+          </nav>
+        </div>
+        <div class="flex items-center gap-3 text-sm">
+          <span class="text-tenue"><span data-usuario>…</span></span>
+          <a href="/" class="btn-texto">Sitio público</a>
+          <button class="btn-suave" id="salir" type="button">Salir</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="mx-auto max-w-6xl px-5 py-8">
+      <slot />
+    </main>
+
+    <script>
+      import { cerrarSesion, protegerPagina } from '../lib/sesion';
+
+      await protegerPagina();
+      document.getElementById('salir')?.addEventListener('click', () => {
+        void cerrarSesion();
+      });
+    </script>
+  </body>
+</html>

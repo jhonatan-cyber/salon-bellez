@@ -1,0 +1,8 @@
+---
+import AppLayout from '../../layouts/AppLayout.astro';
+import Agenda from '../../components/Agenda.svelte';
+---
+
+<AppLayout titulo="Agenda" actual="agenda">
+  <Agenda client:only="svelte" />
+</AppLayout>

@@ -1,0 +1,183 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout titulo="Salón Aurora — Cortes, color y uñas">
+  <header class="border-b border-arena/70 bg-crema/90 backdrop-blur">
+    <nav class="mx-auto flex max-w-6xl items-center justify-between px-5 py-4">
+      <a href="/" class="font-display text-xl tracking-tight text-ciruela-oscuro">Salón Aurora</a>
+      <div class="flex items-center gap-2">
+        <a href="#servicios" class="btn-texto hidden sm:inline-flex">Servicios</a>
+        <a href="#equipo" class="btn-texto hidden sm:inline-flex">Equipo</a>
+        <a href="/reservar" class="btn-primario">Reservar cita</a>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <section class="mx-auto grid max-w-6xl items-center gap-10 px-5 py-16 md:grid-cols-[1.1fr_0.9fr] md:py-24">
+      <div>
+        <p class="mb-4 text-xs font-semibold uppercase tracking-[0.2em] text-ciruela">
+          Salón de belleza · Ciudad de México
+        </p>
+        <h1 class="text-4xl leading-tight text-ciruela-oscuro sm:text-5xl md:text-6xl">
+          Tu cabello, tu tiempo, tu ritual.
+        </h1>
+        <p class="mt-5 max-w-xl text-base leading-relaxed text-tenue">
+          Cortes con asesoría, color que respeta tu hebra y manos cuidadas. Agenda en línea en menos
+          de un minuto: elige servicio, estilista y horario disponible.
+        </p>
+        <div class="mt-8 flex flex-wrap gap-3">
+          <a href="/reservar" class="btn-primario px-7 py-3">Reservar ahora</a>
+          <a href="/login" class="btn-suave px-7 py-3">Acceso del equipo</a>
+        </div>
+        <dl class="mt-10 grid max-w-md grid-cols-3 gap-4 border-t border-arena pt-6 text-sm">
+          <div>
+            <dt class="text-tenue">Abierto</dt>
+            <dd class="mt-1 font-medium text-tinta">Lun a Sáb</dd>
+          </div>
+          <div>
+            <dt class="text-tenue">Horario</dt>
+            <dd class="mt-1 font-medium text-tinta">9:00 – 19:00</dd>
+          </div>
+          <div>
+            <dt class="text-tenue">Reserva</dt>
+            <dd class="mt-1 font-medium text-tinta">Sin costo</dd>
+          </div>
+        </dl>
+      </div>
+      <div class="relative">
+        <div class="absolute -inset-4 rounded-[2.5rem] bg-rosa/50 blur-2xl"></div>
+        <div class="relative overflow-hidden rounded-[2rem] border border-arena bg-white p-8">
+          <div class="mb-6 flex items-center justify-between">
+            <span class="font-display text-lg text-ciruela-oscuro">Esta semana</span>
+            <span class="insignia bg-rosa/70 text-ciruela">Agenda abierta</span>
+          </div>
+          <ul class="space-y-4 text-sm">
+            <li class="flex items-center justify-between border-b border-arena/70 pb-3">
+              <span class="text-tinta">Corte y peinado</span><span class="text-tenue">45 min</span>
+            </li>
+            <li class="flex items-center justify-between border-b border-arena/70 pb-3">
+              <span class="text-tinta">Color completo</span><span class="text-tenue">150 min</span>
+            </li>
+            <li class="flex items-center justify-between border-b border-arena/70 pb-3">
+              <span class="text-tinta">Manicure ruso</span><span class="text-tenue">60 min</span>
+            </li>
+            <li class="flex items-center justify-between">
+              <span class="text-tinta">Tratamiento de keratina</span><span class="text-tenue">120 min</span>
+            </li>
+          </ul>
+          <a href="/reservar" class="btn-primario mt-7 w-full">Ver horarios disponibles</a>
+        </div>
+      </div>
+    </section>
+
+    <section id="servicios" class="border-y border-arena bg-white/60 py-16">
+      <div class="mx-auto max-w-6xl px-5">
+        <div class="mb-10 max-w-2xl">
+          <h2 class="text-3xl text-ciruela-oscuro">Servicios</h2>
+          <p class="mt-2 text-tenue">
+            Precios en pesos mexicanos. La duración es la que reservamos en agenda para ti.
+          </p>
+        </div>
+        <div id="servicios-lista" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <p class="text-sm text-tenue">Cargando servicios…</p>
+        </div>
+        <p id="servicios-error" class="mt-6 hidden rounded-xl bg-rosa/50 px-4 py-3 text-sm text-ciruela">
+          No pudimos cargar los servicios. Intenta de nuevo en un momento.
+        </p>
+      </div>
+    </section>
+
+    <section id="equipo" class="py-16">
+      <div class="mx-auto max-w-6xl px-5">
+        <div class="mb-10 max-w-2xl">
+          <h2 class="text-3xl text-ciruela-oscuro">Equipo</h2>
+          <p class="mt-2 text-tenue">
+            Cada estilista tiene su especialidad y su propia agenda. Elige a quien te acompaña.
+          </p>
+        </div>
+        <div id="equipo-lista" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <p class="text-sm text-tenue">Cargando equipo…</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="bg-ciruela-oscuro py-16 text-crema">
+      <div class="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 px-5 md:flex-row md:items-center">
+        <div>
+          <h2 class="text-3xl text-crema">¿Lista para tu próxima cita?</h2>
+          <p class="mt-2 max-w-xl text-crema/80">
+            Reserva en línea y te confirmamos por teléfono. Si necesitas moverla, llámanos con 4
+            horas de anticipación.
+          </p>
+        </div>
+        <a href="/reservar" class="btn bg-rosa text-ciruela-oscuro hover:bg-white">Reservar cita</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="mx-auto flex max-w-6xl flex-col gap-2 px-5 py-8 text-sm text-tenue sm:flex-row sm:items-center sm:justify-between">
+    <p>Salón Aurora · Av. Reforma 123, Cuauhtémoc, CDMX</p>
+    <p>Tel. 55 1234 5678</p>
+  </footer>
+
+  <script>
+    import { api, type Categoria, type Estilista, type Servicio } from '../lib/api';
+    import { esc, pesos } from '../lib/formato';
+
+    const lista = document.getElementById('servicios-lista');
+    const error = document.getElementById('servicios-error');
+
+    if (lista) {
+      try {
+        const datos = await api<{ servicios: Servicio[]; categorias: Categoria[] }>(
+          '/public/servicios'
+        );
+        const categorias = new Map(datos.categorias.map((c) => [c.id, c.nombre]));
+        lista.innerHTML = datos.servicios
+          .map(
+            (s) => `
+            <article class="card flex flex-col justify-between">
+              <div>
+                <p class="text-xs uppercase tracking-wide text-ciruela">${esc(
+                  categorias.get(s.categoria_id ?? '') ?? 'Servicio'
+                )}</p>
+                <h3 class="mt-1 text-lg text-ciruela-oscuro">${esc(s.nombre)}</h3>
+                ${s.descripcion ? `<p class="mt-2 text-sm text-tenue">${esc(s.descripcion)}</p>` : ''}
+              </div>
+              <div class="mt-5 flex items-center justify-between border-t border-arena pt-4 text-sm">
+                <span class="text-tenue">${s.duracion_min} min</span>
+                <span class="font-medium text-tinta">${pesos(s.precio_centavos)}</span>
+              </div>
+            </article>`
+          )
+          .join('');
+      } catch {
+        if (error) error.classList.remove('hidden');
+      }
+    }
+
+    const equipo = document.getElementById('equipo-lista');
+    if (equipo) {
+      try {
+        const datos = await api<Estilista[] | { estilistas: Estilista[] }>('/public/estilistas');
+        const estilistas = Array.isArray(datos) ? datos : datos.estilistas;
+        equipo.innerHTML = estilistas
+          .map(
+            (e) => `
+            <article class="card text-center">
+              <span class="mx-auto flex h-14 w-14 items-center justify-center rounded-full text-lg font-medium text-white" style="background:${esc(
+                e.color
+              )}">${esc(e.nombre.slice(0, 1))}</span>
+              <h3 class="mt-3 text-base text-ciruela-oscuro">${esc(e.nombre)}</h3>
+              <p class="mt-1 text-xs text-tenue">Agenda propia</p>
+            </article>`
+          )
+          .join('');
+      } catch {
+        equipo.innerHTML = '<p class="text-sm text-tenue">No pudimos cargar el equipo.</p>';
+      }
+    }
+  </script>
+</Layout>

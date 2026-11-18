@@ -1,0 +1,424 @@
+---
+import AppLayout from '../../layouts/AppLayout.astro';
+---
+
+<AppLayout titulo="Inicio" actual="inicio">
+  <section class="space-y-6">
+    <header class="flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-ciruela" id="fecha-hoy">
+          Hoy
+        </p>
+        <h1 class="mt-1 text-3xl text-ciruela-oscuro">
+          Hola, <span data-usuario>…</span>
+        </h1>
+        <p class="mt-1 text-sm text-tenue" id="saludo">Este es el pulso del salón hoy.</p>
+      </div>
+      <div class="flex flex-wrap gap-2 no-imprimir">
+        <a href="/app/agenda" class="btn-suave">Ver agenda</a>
+        <a href="/app/caja" class="btn-primario" id="boton-caja">Cobrar en caja</a>
+      </div>
+    </header>
+
+    <p id="error" class="hidden rounded-xl bg-rosa/60 px-4 py-3 text-sm text-ciruela-oscuro"></p>
+
+    <div id="kpis" class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div class="card h-[7.5rem] animate-pulse bg-arena/40"></div>
+      <div class="card h-[7.5rem] animate-pulse bg-arena/40"></div>
+      <div class="card h-[7.5rem] animate-pulse bg-arena/40"></div>
+      <div class="card h-[7.5rem] animate-pulse bg-arena/40"></div>
+    </div>
+
+    <div class="grid gap-5 xl:grid-cols-[1.3fr_1fr]">
+      <section class="card flex flex-col">
+        <div class="mb-4 flex items-start justify-between gap-3">
+          <div>
+            <h2 class="text-lg text-ciruela-oscuro">Agenda de hoy</h2>
+            <p class="text-xs text-tenue" id="agenda-resumen">Cargando…</p>
+          </div>
+          <a href="/app/agenda" class="btn-texto shrink-0">Abrir agenda</a>
+        </div>
+        <ul id="agenda-hoy" class="max-h-[26rem] space-y-2 overflow-y-auto pr-1"></ul>
+      </section>
+
+      <div class="space-y-5" id="bloque-finanzas">
+        <section class="card">
+          <div class="mb-4 flex items-baseline justify-between gap-3">
+            <h2 class="text-lg text-ciruela-oscuro">Ingresos · 14 días</h2>
+            <span class="font-display text-lg text-ciruela-oscuro" id="serie-total">—</span>
+          </div>
+          <div id="grafico" class="flex h-40 items-end gap-1.5"></div>
+          <div class="mt-2 flex justify-between text-[11px] text-tenue" id="grafico-ejes">
+            <span>—</span><span>—</span><span>—</span>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2 class="text-lg text-ciruela-oscuro">Servicios más pedidos</h2>
+          <p class="mb-4 text-xs text-tenue">Citas atendidas en los últimos 30 días.</p>
+          <ul id="top-servicios" class="space-y-3 text-sm">
+            <li class="text-tenue">Cargando…</li>
+          </ul>
+        </section>
+      </div>
+    </div>
+
+    <div class="grid gap-5 md:grid-cols-2" id="bloque-equipo">
+      <section class="card">
+        <h2 class="text-lg text-ciruela-oscuro">Equipo</h2>
+        <p class="mb-4 text-xs text-tenue">Citas atendidas e ingresos de los últimos 30 días.</p>
+        <ul id="equipo" class="space-y-3 text-sm">
+          <li class="text-tenue">Cargando…</li>
+        </ul>
+      </section>
+
+      <section class="card">
+        <h2 class="text-lg text-ciruela-oscuro">Inventario por reponer</h2>
+        <p class="mb-4 text-xs text-tenue">Productos en o por debajo de su stock mínimo.</p>
+        <ul id="stock" class="space-y-3 text-sm">
+          <li class="text-tenue">Cargando…</li>
+        </ul>
+      </section>
+    </div>
+  </section>
+
+  <script>
+    import { api, type CitaDetalle, type Estilista, type Producto } from '../../lib/api';
+    import {
+      diaSemana,
+      esc,
+      fechaCorta,
+      hora,
+      hoyLocal,
+      inicioDelDia,
+      finDelDia,
+      pesos,
+      sumarDias,
+    } from '../../lib/formato';
+    import { protegerPagina } from '../../lib/sesion';
+
+    interface CajaDia {
+      total_centavos: number;
+      tickets: number;
+    }
+
+    interface Resumen {
+      ingresos_centavos: number;
+      propinas_centavos: number;
+      tickets: number;
+      ticket_promedio_centavos: number;
+      citas: number;
+      citas_atendidas: number;
+      citas_no_show: number;
+      tasa_no_show: number;
+    }
+
+    interface Dia {
+      dia: string;
+      total_centavos: number;
+      tickets: number;
+    }
+
+    interface ServicioTop {
+      servicio: string;
+      cantidad: number;
+      total_centavos: number;
+    }
+
+    interface EquipoTop {
+      estilista: string;
+      citas: number;
+      total_centavos: number;
+    }
+
+    const ESTADOS: Record<string, { texto: string; clase: string }> = {
+      pendiente: { texto: 'Pendiente', clase: 'bg-arena text-tenue' },
+      confirmada: { texto: 'Confirmada', clase: 'bg-rosa/70 text-ciruela' },
+      atendida: { texto: 'Atendida', clase: 'bg-salvia/15 text-salvia' },
+      no_show: { texto: 'No asistió', clase: 'bg-amber-100 text-amber-800' },
+      cancelada: { texto: 'Cancelada', clase: 'bg-red-100 text-red-700' },
+    };
+
+    const kpis = document.getElementById('kpis')!;
+    const listaAgenda = document.getElementById('agenda-hoy')!;
+    const resumenAgenda = document.getElementById('agenda-resumen')!;
+    const error = document.getElementById('error')!;
+
+    function mostrarError(texto: string) {
+      error.textContent = texto;
+      error.classList.remove('hidden');
+    }
+
+    function mostrarVacio(lista: HTMLElement, texto: string) {
+      lista.innerHTML = `<li class="rounded-xl bg-arena/30 px-3 py-4 text-sm text-tenue">${esc(texto)}</li>`;
+    }
+
+    function kpi(etiqueta: string, valor: string, detalle: string): string {
+      return `
+        <article class="card">
+          <p class="text-xs font-medium uppercase tracking-wide text-tenue">${esc(etiqueta)}</p>
+          <p class="mt-2 font-display text-3xl leading-none text-ciruela-oscuro">${esc(valor)}</p>
+          <p class="mt-2 text-xs text-tenue">${esc(detalle)}</p>
+        </article>`;
+    }
+
+    function pintarAgenda(citas: CitaDetalle[]) {
+      const ordenadas = [...citas].sort((a, b) => a.cita.inicio.localeCompare(b.cita.inicio));
+      const atendidas = ordenadas.filter((c) => c.cita.estado === 'atendida').length;
+      const porAtender = ordenadas.filter(
+        (c) => c.cita.estado === 'pendiente' || c.cita.estado === 'confirmada'
+      ).length;
+      resumenAgenda.textContent = `${ordenadas.length} cita${ordenadas.length === 1 ? '' : 's'} · ${porAtender} por atender · ${atendidas} atendidas`;
+
+      if (ordenadas.length === 0) {
+        mostrarVacio(listaAgenda, 'No hay citas para hoy. Abre la agenda para agendar una.');
+        return;
+      }
+
+      const ahora = Date.now();
+      const siguiente = ordenadas.find(
+        (c) =>
+          (c.cita.estado === 'pendiente' || c.cita.estado === 'confirmada') &&
+          new Date(c.cita.inicio).getTime() >= ahora
+      );
+
+      listaAgenda.innerHTML = ordenadas
+        .map(({ cita, servicios }) => {
+          const estado = ESTADOS[cita.estado] ?? { texto: cita.estado, clase: 'bg-arena text-tenue' };
+          const esSiguiente = siguiente?.cita.id === cita.id;
+          const detalle = servicios.map((s) => s.descripcion).join(' + ') || 'Sin servicios';
+          return `
+            <li class="flex gap-3 rounded-xl border px-3 py-2.5 ${
+              esSiguiente ? 'border-ciruela/30 bg-rosa/20' : 'border-arena/70'
+            }">
+              <div class="w-12 shrink-0 text-center">
+                <p class="font-display text-base leading-tight text-ciruela-oscuro">${hora(cita.inicio)}</p>
+                <p class="text-[11px] text-tenue">${hora(cita.fin)}</p>
+              </div>
+              <div class="min-w-0 flex-1">
+                <p class="truncate text-sm font-medium">
+                  ${esc(cita.cliente_nombre)}
+                  ${esSiguiente ? '<span class="ml-1 text-[11px] font-normal text-ciruela">· siguiente</span>' : ''}
+                </p>
+                <p class="truncate text-xs text-tenue">${esc(detalle)}</p>
+                <p class="truncate text-[11px] text-tenue">${esc(cita.estilista_nombre)}</p>
+              </div>
+              <span class="insignia h-fit shrink-0 ${estado.clase}">${esc(estado.texto)}</span>
+            </li>`;
+        })
+        .join('');
+    }
+
+    function pintarGrafico(serie: Dia[], hoy: string) {
+      const dias = Array.from({ length: 14 }, (_, i) => sumarDias(hoy, i - 13));
+      const mapa = new Map(serie.map((d) => [String(d.dia).slice(0, 10), d.total_centavos]));
+      const valores = dias.map((fecha) => ({ fecha, total: mapa.get(fecha) ?? 0 }));
+      const max = Math.max(1, ...valores.map((v) => v.total));
+
+      document.getElementById('serie-total')!.textContent = pesos(
+        valores.reduce((total, v) => total + v.total, 0)
+      );
+
+      document.getElementById('grafico')!.innerHTML = valores
+        .map((v, i) => {
+          const alto = v.total === 0 ? 4 : Math.max(10, Math.round((v.total / max) * 140));
+          const esHoy = i === valores.length - 1;
+          const color = v.total === 0 ? 'bg-arena' : esHoy ? 'bg-ciruela' : 'bg-rosa';
+          return `<div class="flex flex-1 flex-col justify-end" title="${esc(
+            fechaCorta(`${v.fecha}T18:00:00Z`)
+          )}: ${pesos(v.total)}">
+            <div class="w-full rounded-t-md ${color}" style="height:${alto}px"></div>
+          </div>`;
+        })
+        .join('');
+
+      document.getElementById('grafico-ejes')!.innerHTML = `
+        <span>${esc(fechaCorta(`${dias[0]}T18:00:00Z`))}</span>
+        <span>${esc(fechaCorta(`${dias[6]}T18:00:00Z`))}</span>
+        <span>Hoy</span>`;
+    }
+
+    function pintarTopServicios(servicios: ServicioTop[]) {
+      const lista = document.getElementById('top-servicios')!;
+      if (servicios.length === 0) {
+        mostrarVacio(lista, 'Aún no hay citas atendidas en el periodo.');
+        return;
+      }
+      const max = Math.max(1, ...servicios.map((s) => s.total_centavos));
+      lista.innerHTML = servicios
+        .slice(0, 5)
+        .map(
+          (s) => `
+          <li>
+            <div class="flex items-baseline justify-between gap-3">
+              <span class="truncate">${esc(s.servicio)}</span>
+              <span class="shrink-0 text-xs text-tenue">${s.cantidad} · ${pesos(s.total_centavos)}</span>
+            </div>
+            <div class="mt-1.5 h-1.5 rounded-full bg-arena">
+              <div class="h-1.5 rounded-full bg-ciruela" style="width:${Math.max(
+                4,
+                Math.round((s.total_centavos / max) * 100)
+              )}%"></div>
+            </div>
+          </li>`
+        )
+        .join('');
+    }
+
+    function pintarEquipo(equipo: EquipoTop[]) {
+      const lista = document.getElementById('equipo')!;
+      const activos = equipo.filter((e) => e.citas > 0 || e.total_centavos > 0);
+      if (activos.length === 0) {
+        mostrarVacio(lista, 'Sin actividad registrada en el periodo.');
+        return;
+      }
+      lista.innerHTML = activos
+        .slice(0, 5)
+        .map(
+          (e) => `
+          <li class="flex items-center justify-between gap-3 border-b border-arena/60 pb-2 last:border-0 last:pb-0">
+            <span class="flex min-w-0 items-center gap-2">
+              <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-rosa/60 text-xs font-medium text-ciruela">
+                ${esc(e.estilista.slice(0, 1))}
+              </span>
+              <span class="truncate">${esc(e.estilista)}</span>
+            </span>
+            <span class="shrink-0 text-right text-xs text-tenue">
+              ${e.citas} cita${e.citas === 1 ? '' : 's'}<br />
+              <span class="text-sm text-tinta">${pesos(e.total_centavos)}</span>
+            </span>
+          </li>`
+        )
+        .join('');
+    }
+
+    function pintarStock(productos: Producto[]) {
+      const lista = document.getElementById('stock')!;
+      const bajos = productos
+        .filter((p) => p.activo && p.stock <= p.stock_minimo)
+        .sort((a, b) => a.stock - b.stock);
+      if (bajos.length === 0) {
+        mostrarVacio(lista, 'Todo el inventario está por encima de su mínimo.');
+        return;
+      }
+      lista.innerHTML = bajos
+        .slice(0, 6)
+        .map((p) => {
+          const agotado = p.stock <= 0;
+          return `
+            <li class="flex items-center justify-between gap-3">
+              <span class="min-w-0">
+                <span class="block truncate">${esc(p.nombre)}</span>
+                <span class="text-xs text-tenue">Mínimo ${p.stock_minimo}</span>
+              </span>
+              <span class="insignia shrink-0 ${
+                agotado ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-800'
+              }">${agotado ? 'Agotado' : `${p.stock} en stock`}</span>
+            </li>`;
+        })
+        .join('');
+    }
+
+    const usuario = await protegerPagina();
+
+    if (usuario) {
+      const hoy = hoyLocal();
+      const esAdmin = usuario.rol !== 'estilista';
+      document.getElementById('fecha-hoy')!.textContent = diaSemana(hoy);
+
+      if (!esAdmin) {
+        document.getElementById('boton-caja')?.setAttribute('hidden', '');
+        document.getElementById('bloque-finanzas')!.hidden = true;
+        document.getElementById('bloque-equipo')!.hidden = true;
+      }
+
+      let citas: CitaDetalle[] = [];
+      try {
+        citas = await api<CitaDetalle[]>(
+          `/citas?desde=${encodeURIComponent(inicioDelDia(hoy))}&hasta=${encodeURIComponent(finDelDia(hoy))}`
+        );
+        if (!esAdmin) {
+          const equipo = await api<Estilista[]>('/estilistas');
+          const propio = equipo.find((e) => e.usuario_id === usuario.id);
+          citas = propio ? citas.filter((c) => c.cita.estilista_id === propio.id) : [];
+          document.getElementById('saludo')!.textContent =
+            'Tus citas de hoy y lo que falta por atender.';
+        }
+        pintarAgenda(citas);
+      } catch (e) {
+        mostrarError(e instanceof Error ? e.message : 'No se pudo cargar la agenda de hoy.');
+        mostrarVacio(listaAgenda, 'Agenda no disponible.');
+      }
+
+      const atendidas = citas.filter((c) => c.cita.estado === 'atendida').length;
+      const porAtender = citas.filter(
+        (c) => c.cita.estado === 'pendiente' || c.cita.estado === 'confirmada'
+      ).length;
+
+      if (!esAdmin) {
+        const serviciosDelDia = citas.reduce((total, c) => total + c.servicios.length, 0);
+        const proxima = citas
+          .map((c) => c.cita)
+          .filter(
+            (c) =>
+              c.estado !== 'cancelada' &&
+              c.estado !== 'no_show' &&
+              new Date(c.inicio).getTime() >= Date.now()
+          )
+          .sort((a, b) => a.inicio.localeCompare(b.inicio))[0];
+
+        kpis.innerHTML = [
+          kpi('Citas de hoy', String(citas.length), `${porAtender} por atender`),
+          kpi('Atendidas', String(atendidas), 'Citas ya completadas'),
+          kpi('Servicios del día', String(serviciosDelDia), 'En tus citas de hoy'),
+          kpi(
+            'Siguiente cita',
+            proxima ? hora(proxima.inicio) : '—',
+            proxima ? proxima.cliente_nombre : 'Sin citas pendientes hoy'
+          ),
+        ].join('');
+      } else {
+        try {
+          const [caja, resumen, serie, serviciosTop, equipoTop, productos] = await Promise.all([
+            api<CajaDia>('/caja/resumen'),
+            api<Resumen>('/reportes/resumen'),
+            api<Dia[]>(`/reportes/ingresos-por-dia?desde=${sumarDias(hoy, -13)}&hasta=${hoy}`),
+            api<ServicioTop[]>('/reportes/por-servicio'),
+            api<EquipoTop[]>('/reportes/por-estilista'),
+            api<Producto[]>('/productos'),
+          ]);
+
+          kpis.innerHTML = [
+            kpi(
+              'Ingresos de hoy',
+              pesos(caja.total_centavos),
+              `${caja.tickets} ticket${caja.tickets === 1 ? '' : 's'} cobrado${caja.tickets === 1 ? '' : 's'}`
+            ),
+            kpi(
+              'Citas de hoy',
+              String(citas.length),
+              `${porAtender} por atender · ${atendidas} atendidas`
+            ),
+            kpi(
+              'Ingresos · 30 días',
+              pesos(resumen.ingresos_centavos),
+              `Ticket promedio ${pesos(resumen.ticket_promedio_centavos)}`
+            ),
+            kpi(
+              'No-show · 30 días',
+              `${resumen.tasa_no_show}%`,
+              `${resumen.citas_no_show} de ${resumen.citas} citas`
+            ),
+          ].join('');
+
+          pintarGrafico(serie, hoy);
+          pintarTopServicios(serviciosTop);
+          pintarEquipo(equipoTop);
+          pintarStock(productos);
+        } catch (e) {
+          mostrarError(e instanceof Error ? e.message : 'No se pudieron cargar los indicadores.');
+        }
+      }
+    }
+  </script>
+</AppLayout>

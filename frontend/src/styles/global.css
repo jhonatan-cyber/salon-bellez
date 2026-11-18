@@ -1,0 +1,77 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-display: 'Fraunces', ui-serif, Georgia, serif;
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+
+  --color-crema: #fdf8f5;
+  --color-arena: #f3e7df;
+  --color-tinta: #2b1b28;
+  --color-tenue: #7a6572;
+  --color-ciruela: #6d2e5b;
+  --color-ciruela-oscuro: #4a1d3d;
+  --color-rosa: #f4d7e2;
+  --color-salvia: #5d7d68;
+}
+
+@layer base {
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+}
+
+@layer components {
+  .btn,
+  .btn-primario,
+  .btn-suave,
+  .btn-texto {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm
+      font-medium transition;
+  }
+
+  .btn:disabled,
+  .btn-primario:disabled,
+  .btn-suave:disabled,
+  .btn-texto:disabled {
+    @apply cursor-not-allowed opacity-50;
+  }
+
+  .btn-primario {
+    @apply bg-ciruela text-crema hover:bg-ciruela-oscuro;
+  }
+
+  .btn-suave {
+    @apply border border-arena bg-white text-ciruela hover:border-ciruela/40 hover:bg-rosa/40;
+  }
+
+  .btn-texto {
+    @apply px-3 py-1.5 text-ciruela hover:bg-rosa/50;
+  }
+
+  .card {
+    @apply rounded-2xl border border-arena bg-white/90 p-5 shadow-[0_10px_30px_-24px_rgba(43,27,40,0.5)];
+  }
+
+  .etiqueta {
+    @apply mb-1 block text-xs font-medium uppercase tracking-wide text-tenue;
+  }
+
+  .campo {
+    @apply w-full rounded-xl border border-arena bg-white px-3 py-2 text-sm text-tinta
+      outline-none focus:border-ciruela focus:ring-2 focus:ring-rosa;
+  }
+
+  .insignia {
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
+  }
+}
+
+@media print {
+  .no-imprimir {
+    display: none !important;
+  }
+}

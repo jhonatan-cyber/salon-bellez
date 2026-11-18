@@ -1,0 +1,96 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout titulo="Entrar — Salón Aurora">
+  <main class="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-5 py-12">
+    <a href="/" class="mb-8 font-display text-xl text-ciruela-oscuro">Salón Aurora</a>
+
+    <div class="card">
+      <h1 class="text-2xl text-ciruela-oscuro">Acceso del equipo</h1>
+      <p class="mt-1 text-sm text-tenue">Agenda, clientes, caja e inventario.</p>
+
+      <form id="form-login" class="mt-6 space-y-4">
+        <div>
+          <label class="etiqueta" for="email">Correo</label>
+          <input
+            class="campo"
+            id="email"
+            name="email"
+            type="email"
+            autocomplete="username"
+            required
+            placeholder="tu@salon.mx"
+          />
+        </div>
+        <div>
+          <label class="etiqueta" for="password">Contraseña</label>
+          <input
+            class="campo"
+            id="password"
+            name="password"
+            type="password"
+            autocomplete="current-password"
+            required
+            minlength="8"
+          />
+        </div>
+        <p id="error" class="hidden rounded-xl bg-rosa/60 px-3 py-2 text-sm text-ciruela-oscuro"></p>
+        <button class="btn-primario w-full" type="submit" id="entrar">Entrar</button>
+      </form>
+    </div>
+
+    <p class="mt-6 text-center text-xs text-tenue">
+      ¿No tienes cuenta? Pídele al administrador que te cree una.
+    </p>
+  </main>
+
+  <script>
+    import { api, type Usuario } from '../lib/api';
+    import { obtenerSesion } from '../lib/sesion';
+
+    const params = new URLSearchParams(location.search);
+    const siguiente = params.get('siguiente') ?? '/app/inicio';
+
+    if (await obtenerSesion()) {
+      location.replace(siguiente);
+    }
+
+    const form = document.getElementById('form-login') as HTMLFormElement | null;
+    const error = document.getElementById('error') as HTMLParagraphElement | null;
+    const boton = document.getElementById('entrar') as HTMLButtonElement | null;
+
+    form?.addEventListener('submit', async (evento) => {
+      evento.preventDefault();
+      const datos = new FormData(form);
+      if (boton) {
+        boton.disabled = true;
+        boton.textContent = 'Entrando…';
+      }
+      error?.classList.add('hidden');
+
+      try {
+        await api<{ usuario: Usuario }>('/auth/login', {
+          metodo: 'POST',
+          cuerpo: {
+            email: String(datos.get('email')).trim(),
+            password: String(datos.get('password')),
+          },
+        });
+        location.replace(siguiente);
+      } catch (e) {
+        if (error) {
+          error.textContent =
+            e instanceof Error && e.message !== 'no autenticado'
+              ? e.message
+              : 'Correo o contraseña incorrectos.';
+          error.classList.remove('hidden');
+        }
+        if (boton) {
+          boton.disabled = false;
+          boton.textContent = 'Entrar';
+        }
+      }
+    });
+  </script>
+</Layout>

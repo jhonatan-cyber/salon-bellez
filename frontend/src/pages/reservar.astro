@@ -1,0 +1,331 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout titulo="Reservar cita — Salón Aurora">
+  <header class="border-b border-arena/70 bg-crema/90">
+    <nav class="mx-auto flex max-w-4xl items-center justify-between px-5 py-4">
+      <a href="/" class="font-display text-xl text-ciruela-oscuro">Salón Aurora</a>
+      <a href="/" class="btn-texto">Volver al inicio</a>
+    </nav>
+  </header>
+
+  <main class="mx-auto max-w-4xl px-5 py-10">
+    <h1 class="text-3xl text-ciruela-oscuro sm:text-4xl">Reserva tu cita</h1>
+    <p class="mt-2 text-tenue">
+      Elige servicio, estilista y horario. Te confirmamos por teléfono.
+    </p>
+
+    <ol class="mt-8 flex flex-wrap gap-2 text-xs text-tenue" id="pasos">
+      <li class="insignia bg-rosa/70 text-ciruela" data-paso-indicador="1">1. Servicio</li>
+      <li class="insignia bg-arena/70" data-paso-indicador="2">2. Estilista</li>
+      <li class="insignia bg-arena/70" data-paso-indicador="3">3. Horario</li>
+      <li class="insignia bg-arena/70" data-paso-indicador="4">4. Tus datos</li>
+    </ol>
+
+    <p id="error" class="mt-6 hidden rounded-xl bg-rosa/60 px-4 py-3 text-sm text-ciruela-oscuro"></p>
+
+    <section class="mt-8" data-paso="1">
+      <h2 class="text-xl text-ciruela-oscuro">¿Qué te vas a hacer?</h2>
+      <div id="servicios" class="mt-4 grid gap-3 sm:grid-cols-2">
+        <p class="text-sm text-tenue">Cargando servicios…</p>
+      </div>
+    </section>
+
+    <section class="mt-10 hidden" data-paso="2">
+      <h2 class="text-xl text-ciruela-oscuro">¿Con quién?</h2>
+      <div id="estilistas" class="mt-4 flex flex-wrap gap-3"></div>
+    </section>
+
+    <section class="mt-10 hidden" data-paso="3">
+      <h2 class="text-xl text-ciruela-oscuro">¿Cuándo?</h2>
+      <div class="mt-4 flex flex-wrap items-end gap-4">
+        <div>
+          <label class="etiqueta" for="fecha">Fecha</label>
+          <input class="campo" type="date" id="fecha" />
+        </div>
+        <p class="text-sm text-tenue" id="duracion"></p>
+      </div>
+      <div id="slots" class="mt-5 grid grid-cols-3 gap-2 sm:grid-cols-5"></div>
+      <p id="sin-slots" class="mt-4 hidden text-sm text-tenue">
+        No hay horarios libres ese día para este servicio. Prueba otra fecha.
+      </p>
+    </section>
+
+    <section class="mt-10 hidden" data-paso="4">
+      <h2 class="text-xl text-ciruela-oscuro">Tus datos</h2>
+      <form id="form-reserva" class="card mt-4 space-y-4">
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label class="etiqueta" for="nombre">Nombre completo</label>
+            <input class="campo" id="nombre" name="nombre" required minlength="2" autocomplete="name" />
+          </div>
+          <div>
+            <label class="etiqueta" for="telefono">Teléfono</label>
+            <input class="campo" id="telefono" name="telefono" inputmode="tel" autocomplete="tel" />
+          </div>
+        </div>
+        <div>
+          <label class="etiqueta" for="email">Correo (opcional)</label>
+          <input class="campo" id="email" name="email" type="email" autocomplete="email" />
+        </div>
+        <label class="flex items-start gap-2 text-sm text-tenue">
+          <input class="mt-1" type="checkbox" id="marketing" name="marketing" />
+          Quiero recibir promociones y recordatorios.
+        </label>
+
+        <!-- Trampa para bots: si se llena, el backend descarta la reserva. -->
+        <div class="hidden" aria-hidden="true">
+          <label for="website">No llenar</label>
+          <input id="website" name="website" tabindex="-1" autocomplete="off" />
+        </div>
+
+        <div class="rounded-xl bg-arena/50 px-4 py-3 text-sm" id="resumen"></div>
+
+        <button class="btn-primario w-full" type="submit" id="confirmar">Confirmar reserva</button>
+      </form>
+    </section>
+
+    <section class="mt-10 hidden" data-paso="lista">
+      <div class="card text-center">
+        <p class="insignia bg-salvia/15 text-salvia">Reserva registrada</p>
+        <h2 class="mt-3 text-2xl text-ciruela-oscuro">¡Te esperamos!</h2>
+        <p class="mt-2 text-tenue" id="confirmacion"></p>
+        <div class="mt-6 flex flex-wrap justify-center gap-3">
+          <a href="/" class="btn-suave">Volver al inicio</a>
+          <a href="/reservar" class="btn-primario">Reservar otra cita</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    import { api, type Estilista, type Servicio, type Slot } from '../lib/api';
+    import { esc, fechaLarga, hora, pesos } from '../lib/formato';
+
+    interface Estado {
+      servicio: Servicio | null;
+      estilista: Estilista | null;
+      inicio: string | null;
+    }
+
+    const estado: Estado = { servicio: null, estilista: null, inicio: null };
+
+    const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel);
+    const error = $('#error');
+    const serviciosBox = $('#servicios');
+    const estilistasBox = $('#estilistas');
+    const slotsBox = $('#slots');
+    const sinSlots = $('#sin-slots');
+    const fechaInput = $('#fecha') as HTMLInputElement | null;
+    const resumen = $('#resumen');
+    const boton = $('#confirmar') as HTMLButtonElement | null;
+
+    function mostrarError(mensaje: string | null) {
+      if (!error) return;
+      error.textContent = mensaje ?? '';
+      error.classList.toggle('hidden', !mensaje);
+    }
+
+    function mostrarPaso(paso: number) {
+      document.querySelectorAll<HTMLElement>('[data-paso]').forEach((el) => {
+        el.classList.toggle('hidden', el.dataset.paso !== String(paso));
+      });
+      document.querySelectorAll<HTMLElement>('[data-paso-indicador]').forEach((el) => {
+        const activo = el.dataset.pasoIndicador === String(paso);
+        el.classList.toggle('bg-rosa/70', activo);
+        el.classList.toggle('text-ciruela', activo);
+        el.classList.toggle('bg-arena/70', !activo);
+      });
+    }
+
+    function actualizarResumen() {
+      if (!resumen) return;
+      const partes = [
+        estado.servicio ? esc(estado.servicio.nombre) : 'Elige un servicio',
+        estado.estilista ? esc(estado.estilista.nombre) : 'sin estilista',
+      ];
+      if (estado.inicio) {
+        partes.push(`${esc(fechaLarga(estado.inicio))} a las ${esc(hora(estado.inicio))}`);
+      }
+      if (estado.servicio) partes.push(esc(pesos(estado.servicio.precio_centavos)));
+      resumen.innerHTML = partes.join(' · ');
+    }
+
+    const hoy = new Date();
+    const fechaHoy = new Date(hoy.getTime() - hoy.getTimezoneOffset() * 60000)
+      .toISOString()
+      .slice(0, 10);
+    if (fechaInput) {
+      fechaInput.value = fechaHoy;
+      fechaInput.min = fechaHoy;
+      fechaInput.addEventListener('change', () => {
+        estado.inicio = null;
+        cargarSlots();
+      });
+    }
+
+    async function cargarServicios() {
+      if (!serviciosBox) return;
+      try {
+        const datos = await api<{ servicios: Servicio[]; categorias: { id: string; nombre: string }[] }>(
+          '/public/servicios'
+        );
+        serviciosBox.innerHTML = datos.servicios
+          .map(
+            (s) => `
+            <button type="button" class="card text-left transition hover:border-ciruela/50" data-servicio="${esc(s.id)}">
+              <span class="text-xs uppercase tracking-wide text-ciruela">${esc(s.duracion_min)} min</span>
+              <h3 class="mt-1 text-lg text-ciruela-oscuro">${esc(s.nombre)}</h3>
+              ${s.descripcion ? `<p class="mt-1 text-sm text-tenue">${esc(s.descripcion)}</p>` : ''}
+              <p class="mt-3 text-sm font-medium text-tinta">${esc(pesos(s.precio_centavos))}</p>
+            </button>`
+          )
+          .join('');
+
+        serviciosBox.querySelectorAll<HTMLButtonElement>('[data-servicio]').forEach((boton) => {
+          boton.addEventListener('click', () => {
+            estado.servicio = datos.servicios.find((s) => s.id === boton.dataset.servicio) ?? null;
+            serviciosBox
+              .querySelectorAll('[data-servicio]')
+              .forEach((el) => el.classList.remove('border-ciruela', 'ring-2', 'ring-rosa'));
+            boton.classList.add('border-ciruela', 'ring-2', 'ring-rosa');
+            const duracion = document.getElementById('duracion');
+            if (duracion) duracion.textContent = `Reservamos ${estado.servicio?.duracion_min} min para ti.`;
+            actualizarResumen();
+            mostrarPaso(2);
+          });
+        });
+      } catch {
+        serviciosBox.innerHTML = '<p class="text-sm text-tenue">No pudimos cargar los servicios.</p>';
+      }
+    }
+
+    async function cargarEstilistas() {
+      if (!estilistasBox) return;
+      try {
+        const datos = await api<Estilista[] | { estilistas: Estilista[] }>('/public/estilistas');
+        const estilistas = Array.isArray(datos) ? datos : datos.estilistas;
+        estilistasBox.innerHTML = estilistas
+          .map(
+            (e) => `
+            <button type="button" class="btn-suave" data-estilista="${esc(e.id)}">
+              <span class="h-3 w-3 rounded-full" style="background:${esc(e.color)}"></span>
+              ${esc(e.nombre)}
+            </button>`
+          )
+          .join('');
+        estilistasBox.querySelectorAll<HTMLButtonElement>('[data-estilista]').forEach((boton) => {
+          boton.addEventListener('click', () => {
+            estado.estilista = estilistas.find((e) => e.id === boton.dataset.estilista) ?? null;
+            estilistasBox.querySelectorAll('[data-estilista]').forEach((el) => {
+              el.classList.remove('border-ciruela', 'text-ciruela');
+            });
+            boton.classList.add('border-ciruela', 'text-ciruela');
+            estado.inicio = null;
+            actualizarResumen();
+            mostrarPaso(3);
+            cargarSlots();
+          });
+        });
+      } catch {
+        estilistasBox.innerHTML = '<p class="text-sm text-tenue">No pudimos cargar el equipo.</p>';
+      }
+    }
+
+    async function cargarSlots() {
+      if (!slotsBox || !estado.servicio || !estado.estilista || !fechaInput) return;
+      slotsBox.innerHTML = '<p class="text-sm text-tenue">Buscando horarios…</p>';
+      sinSlots?.classList.add('hidden');
+      try {
+        const datos = await api<{ slots: Slot[] }>(
+          `/public/disponibilidad?servicio_id=${estado.servicio.id}&estilista_id=${estado.estilista.id}&fecha=${fechaInput.value}`
+        );
+        if (datos.slots.length === 0) {
+          slotsBox.innerHTML = '';
+          sinSlots?.classList.remove('hidden');
+          return;
+        }
+        slotsBox.innerHTML = datos.slots
+          .map(
+            (slot) => `
+            <button type="button" class="rounded-xl border border-arena bg-white px-2 py-2 text-sm transition hover:border-ciruela"
+              data-inicio="${esc(slot.inicio)}">${esc(hora(slot.inicio))}</button>`
+          )
+          .join('');
+        slotsBox.querySelectorAll<HTMLButtonElement>('[data-inicio]').forEach((boton) => {
+          boton.addEventListener('click', () => {
+            estado.inicio = boton.dataset.inicio ?? null;
+            slotsBox.querySelectorAll('[data-inicio]').forEach((el) => {
+              el.classList.remove('bg-ciruela', 'text-crema');
+            });
+            boton.classList.add('bg-ciruela', 'text-crema');
+            actualizarResumen();
+            mostrarPaso(4);
+          });
+        });
+      } catch {
+        slotsBox.innerHTML = '<p class="text-sm text-tenue">No pudimos consultar la agenda.</p>';
+      }
+    }
+
+    const form = document.getElementById('form-reserva') as HTMLFormElement | null;
+    form?.addEventListener('submit', async (evento) => {
+      evento.preventDefault();
+      mostrarError(null);
+      if (!estado.servicio || !estado.estilista || !estado.inicio) {
+        mostrarError('Elige servicio, estilista y horario antes de confirmar.');
+        return;
+      }
+      const datos = new FormData(form);
+      const telefono = String(datos.get('telefono') ?? '').trim();
+      const email = String(datos.get('email') ?? '').trim();
+      if (!telefono && !email) {
+        mostrarError('Déjanos un teléfono o un correo para confirmarte.');
+        return;
+      }
+
+      if (boton) {
+        boton.disabled = true;
+        boton.textContent = 'Reservando…';
+      }
+      try {
+        const respuesta = await api<{ inicio: string; servicio: string }>('/public/reservas', {
+          metodo: 'POST',
+          cuerpo: {
+            servicio_id: estado.servicio.id,
+            estilista_id: estado.estilista.id,
+            inicio: estado.inicio,
+            nombre: String(datos.get('nombre') ?? '').trim(),
+            telefono: telefono || null,
+            email: email || null,
+            acepta_marketing: datos.get('marketing') === 'on',
+            website: String(datos.get('website') ?? ''),
+          },
+        });
+        const confirmacion = document.getElementById('confirmacion');
+        if (confirmacion) {
+          confirmacion.textContent = `${respuesta.servicio} · ${fechaLarga(respuesta.inicio)} a las ${hora(
+            respuesta.inicio
+          )}.`;
+        }
+        document.querySelectorAll<HTMLElement>('[data-paso]').forEach((el) => {
+          el.classList.toggle('hidden', el.dataset.paso !== 'lista');
+        });
+        document.getElementById('pasos')?.classList.add('hidden');
+      } catch (e) {
+        mostrarError(e instanceof Error ? e.message : 'No pudimos registrar tu reserva.');
+      } finally {
+        if (boton) {
+          boton.disabled = false;
+          boton.textContent = 'Confirmar reserva';
+        }
+      }
+    });
+
+    mostrarPaso(1);
+    actualizarResumen();
+    await cargarServicios();
+    await cargarEstilistas();
+  </script>
+</Layout>

@@ -1,0 +1,198 @@
+---
+import AppLayout from '../../layouts/AppLayout.astro';
+---
+
+<AppLayout titulo="Clientes" actual="clientes">
+  <section class="space-y-6">
+    <header class="flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <h1 class="text-2xl text-ciruela-oscuro">Clientes</h1>
+        <p class="text-sm text-tenue">Busca por nombre, teléfono o correo.</p>
+      </div>
+      <input class="campo w-full sm:w-72" id="buscar" type="search" placeholder="Buscar…" />
+    </header>
+
+    <p id="aviso" class="hidden rounded-xl bg-salvia/15 px-4 py-3 text-sm text-salvia"></p>
+    <p id="error" class="hidden rounded-xl bg-rosa/60 px-4 py-3 text-sm text-ciruela-oscuro"></p>
+
+    <div class="grid gap-5 lg:grid-cols-[1fr_1.4fr]">
+      <form class="card space-y-4" id="form-cliente">
+        <div class="flex items-center justify-between">
+          <h2 class="text-lg text-ciruela-oscuro" id="titulo-form">Nuevo cliente</h2>
+          <button class="btn-texto hidden" type="button" id="cancelar">Cancelar</button>
+        </div>
+
+        <input type="hidden" id="cliente-id" />
+
+        <div>
+          <label class="etiqueta" for="nombre">Nombre</label>
+          <input class="campo" id="nombre" required minlength="2" />
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="etiqueta" for="telefono">Teléfono</label>
+            <input class="campo" id="telefono" inputmode="tel" />
+          </div>
+          <div>
+            <label class="etiqueta" for="email">Correo</label>
+            <input class="campo" id="email" type="email" />
+          </div>
+        </div>
+        <div>
+          <label class="etiqueta" for="notas">Notas</label>
+          <textarea class="campo" id="notas" rows="3" placeholder="Color, alergias, preferencias…"></textarea>
+        </div>
+        <label class="flex items-center gap-2 text-sm">
+          <input type="checkbox" id="marketing" /> Acepta promociones
+        </label>
+        <button class="btn-primario w-full" type="submit">Guardar cliente</button>
+      </form>
+
+      <div class="card overflow-x-auto">
+        <table class="w-full text-left text-sm">
+          <thead class="text-xs uppercase tracking-wide text-tenue">
+            <tr>
+              <th class="pb-2">Cliente</th>
+              <th class="pb-2">Contacto</th>
+              <th class="pb-2"></th>
+            </tr>
+          </thead>
+          <tbody id="tabla-clientes">
+            <tr><td colspan="3" class="py-3 text-tenue">Cargando…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    import { api, type Cliente } from '../../lib/api';
+    import { esc } from '../../lib/formato';
+    import { protegerPagina } from '../../lib/sesion';
+
+    await protegerPagina();
+
+    const tabla = document.getElementById('tabla-clientes');
+    const error = document.getElementById('error');
+    const aviso = document.getElementById('aviso');
+    const form = document.getElementById('form-cliente') as HTMLFormElement | null;
+    const idInput = document.getElementById('cliente-id') as HTMLInputElement | null;
+    const tituloForm = document.getElementById('titulo-form');
+    const cancelar = document.getElementById('cancelar');
+    const buscar = document.getElementById('buscar') as HTMLInputElement | null;
+
+    let clientes: Cliente[] = [];
+
+    function mensaje(tipo: 'error' | 'aviso', texto: string | null) {
+      const el = tipo === 'error' ? error : aviso;
+      if (!el) return;
+      el.textContent = texto ?? '';
+      el.classList.toggle('hidden', !texto);
+    }
+
+    function valor(id: string): string {
+      const el = document.getElementById(id) as HTMLInputElement | HTMLTextAreaElement | null;
+      return el?.value ?? '';
+    }
+
+    function leerFormulario() {
+      return {
+        nombre: valor('nombre').trim(),
+        telefono: valor('telefono').trim() || null,
+        email: valor('email').trim() || null,
+        notas: valor('notas').trim() || null,
+        acepta_marketing: (document.getElementById('marketing') as HTMLInputElement).checked,
+      };
+    }
+
+    function limpiarFormulario() {
+      form?.reset();
+      if (idInput) idInput.value = '';
+      if (tituloForm) tituloForm.textContent = 'Nuevo cliente';
+      cancelar?.classList.add('hidden');
+    }
+
+    function editar(cliente: Cliente) {
+      const set = (id: string, texto: string) => {
+        const el = document.getElementById(id) as HTMLInputElement | HTMLTextAreaElement | null;
+        if (el) el.value = texto;
+      };
+      if (idInput) idInput.value = cliente.id;
+      set('nombre', cliente.nombre);
+      set('telefono', cliente.telefono ?? '');
+      set('email', cliente.email ?? '');
+      set('notas', cliente.notas ?? '');
+      const marketing = document.getElementById('marketing') as HTMLInputElement | null;
+      if (marketing) marketing.checked = cliente.acepta_marketing;
+      if (tituloForm) tituloForm.textContent = 'Editar cliente';
+      cancelar?.classList.remove('hidden');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    async function cargar() {
+      if (!tabla) return;
+      tabla.innerHTML = '<tr><td colspan="3" class="py-3 text-tenue">Cargando…</td></tr>';
+      try {
+        const q = buscar?.value.trim() ?? '';
+        clientes = await api<Cliente[]>(`/clientes${q ? `?q=${encodeURIComponent(q)}` : ''}`);
+        tabla.innerHTML =
+          clientes
+            .map(
+              (c) => `
+          <tr class="border-t border-arena/70">
+            <td class="py-2">
+              <p class="font-medium">${esc(c.nombre)}</p>
+              ${c.notas ? `<p class="text-xs text-tenue">${esc(c.notas)}</p>` : ''}
+            </td>
+            <td class="py-2 text-xs text-tenue">
+              ${c.telefono ? `<p>${esc(c.telefono)}</p>` : ''}
+              ${c.email ? `<p>${esc(c.email)}</p>` : ''}
+            </td>
+            <td class="py-2 text-right">
+              <button class="btn-texto" data-editar="${esc(c.id)}">Editar</button>
+            </td>
+          </tr>`
+            )
+            .join('') || '<tr><td colspan="3" class="py-3 text-tenue">Sin resultados.</td></tr>';
+
+        tabla.querySelectorAll<HTMLButtonElement>('[data-editar]').forEach((boton) => {
+          boton.addEventListener('click', () => {
+            const cliente = clientes.find((c) => c.id === boton.dataset.editar);
+            if (cliente) editar(cliente);
+          });
+        });
+      } catch (e) {
+        mensaje('error', e instanceof Error ? e.message : 'No se pudieron cargar los clientes.');
+      }
+    }
+
+    let temporizador: ReturnType<typeof setTimeout> | undefined;
+    buscar?.addEventListener('input', () => {
+      clearTimeout(temporizador);
+      temporizador = setTimeout(() => void cargar(), 250);
+    });
+
+    form?.addEventListener('submit', async (evento) => {
+      evento.preventDefault();
+      mensaje('error', null);
+      const id = idInput?.value;
+      try {
+        if (id) {
+          await api(`/clientes/${id}`, { metodo: 'PUT', cuerpo: leerFormulario() });
+          mensaje('aviso', 'Cliente actualizado.');
+        } else {
+          await api('/clientes', { metodo: 'POST', cuerpo: leerFormulario() });
+          mensaje('aviso', 'Cliente creado.');
+        }
+        limpiarFormulario();
+        await cargar();
+      } catch (e) {
+        mensaje('error', e instanceof Error ? e.message : 'No se pudo guardar el cliente.');
+      }
+    });
+
+    cancelar?.addEventListener('click', limpiarFormulario);
+
+    await cargar();
+  </script>
+</AppLayout>
