@@ -1,12 +1,11 @@
 # Frontend (Astro + Svelte + Tailwind)
 
-Salida **estática**. Las páginas consumen la API en `/api` (proxy de Vite en desarrollo,
-Caddy en producción).
+Salida **estática**. Las páginas consumen la API en `/api` (proxy de Astro en desarrollo).
 
 ```bash
 bun install
 bun run dev                 # http://localhost:4321
-API_URL=http://localhost:3100 bun run dev   # si el backend no está en :3000
+API_URL=http://localhost:3100 bun run dev   # si el backend no está en :8000
 bunx --bun astro check
 bunx --bun astro build      # genera dist/
 ```
@@ -19,4 +18,4 @@ Páginas:
 - `/app/inicio` — dashboard del panel (KPIs, agenda del día, ingresos, equipo e inventario)
 - `/app/agenda`, `/app/clientes`, `/app/servicios`, `/app/equipo`, `/app/caja` — panel interno
 
-Detalles de la instalación completa (Postgres, API, Docker) en el `README.md` de la raíz.
+Detalles de la instalación completa (Postgres y API) en el `README.md` de la raíz.

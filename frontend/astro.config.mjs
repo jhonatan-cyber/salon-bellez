@@ -3,8 +3,8 @@ import { defineConfig } from 'astro/config';
 import svelte from '@astrojs/svelte';
 import tailwindcss from '@tailwindcss/vite';
 
-// URL del backend en desarrollo (cámbiala con API_URL si el puerto 3000 está ocupado).
-const apiUrl = process.env.API_URL ?? 'http://localhost:3000';
+// URL del backend en desarrollo (cámbiala con API_URL si el puerto 8000 está ocupado).
+const apiUrl = process.env.API_URL ?? 'http://localhost:8000';
 
 // https://astro.build/config
 export default defineConfig({
@@ -13,7 +13,7 @@ export default defineConfig({
     plugins: [tailwindcss()],
     server: {
       proxy: {
-        // En desarrollo el frontend habla con el backend axum en :3000.
+        // En desarrollo el frontend habla con el backend axum en :8000.
         // En producción Caddy hace el mismo trabajo en un solo origen.
         '/api': {
           target: apiUrl,

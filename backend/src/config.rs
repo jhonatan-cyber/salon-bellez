@@ -22,7 +22,7 @@ impl Config {
         let port = std::env::var("PORT")
             .ok()
             .and_then(|p| p.parse().ok())
-            .unwrap_or(3000);
+            .unwrap_or(8000);
         let app_env = std::env::var("APP_ENV").unwrap_or_else(|_| "development".to_string());
         let app_origin =
             std::env::var("APP_ORIGIN").unwrap_or_else(|_| "http://localhost:4321".to_string());

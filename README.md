@@ -6,7 +6,7 @@ zona horaria configurable (`America/Mexico_City` por defecto).
 
 - **Backend**: Rust 1.100 · axum 0.8.9 · sqlx 0.9 (Postgres, consultas en runtime) · PostgreSQL 18
 - **Frontend**: Astro 7.4 (salida estática) · Bun 1.4 · Tailwind CSS 4.3 · islas Svelte 5 (agenda y caja)
-- **Despliegue**: Docker Compose (Postgres + API + Caddy) en un VPS, o Neon como Postgres gestionado
+- **Despliegue**: Backend y frontend se ejecutan localmente; Postgres local o Neon como Postgres gestionado
 
 ## Estructura
 
@@ -20,40 +20,16 @@ frontend/           Astro estático (Bun)
   src/pages/        index, reservar, login, app/{agenda,clientes,servicios,caja}
   src/components/   Agenda.svelte, Caja.svelte (islas)
   src/lib/          api.ts (cliente tipado), formato.ts (MXN y fechas), sesion.ts
-docker-compose.yml  db + api + web
-Caddyfile           frontend estático y proxy /api -> api:3000
 ```
 
 ## Puesta en marcha
 
-### Con Docker Compose (recomendado)
-
-```bash
-cp .env.example .env      # ajusta JWT_SECRET, ADMIN_EMAIL y ADMIN_PASSWORD
-docker compose up --build
-```
-
-- Frontend y API en un solo origen: <http://localhost:8080>
-- Postgres escucha en `localhost:5432` (usuario/clave `salon` por defecto)
-- Las migraciones corren solas al arrancar la API
-- La administradora inicial se crea con `ADMIN_EMAIL`/`ADMIN_PASSWORD` si no existe
-
-Para un dominio real: cambia `:80` por tu dominio en `Caddyfile`, publica 80/443 y define
-`APP_ORIGIN=https://tu-dominio.mx` (Caddy emite el certificado TLS automáticamente).
-
-> Con `APP_ENV=production` la cookie de sesión se marca `Secure` y el navegador no la guarda
-> sobre `http://`. Si pruebas el stack en `http://localhost:8080`, usa `APP_ENV=development`
-> en `.env`; en el VPS con HTTPS déjalo en `production`.
-
-### En desarrollo
-
 Requisitos: Rust 1.100 (`rust-toolchain.toml`), Bun 1.4 y un Postgres 18 en `localhost:5432`.
 
 ```bash
-# 1. Base de datos (o usa solo el servicio db de Compose)
-docker compose up -d db
+# 1. Asegúrate de tener PostgreSQL corriendo en localhost:5432 con la base de datos `salon`.
 
-# 2. API  (http://localhost:3000)
+# 2. API  (http://localhost:8000)
 cd backend
 export DATABASE_URL=postgres://salon:salon@localhost:5432/salon
 export ADMIN_EMAIL=admin@salon.mx ADMIN_PASSWORD=una-clave-larga
@@ -65,9 +41,9 @@ bun install
 bun run dev          # o: bunx --bun astro dev --background
 ```
 
-En desarrollo Vite hace proxy de `/api` hacia `http://localhost:3000`
+En desarrollo Astro hace proxy de `/api` hacia `http://localhost:8000`
 (`astro.config.mjs`), así que no hay CORS y la cookie de sesión funciona igual que en
-producción. Si el puerto 3000 está ocupado, arranca la API en otro puerto y pasa `API_URL`:
+producción. Si el puerto 8000 está ocupado, arranca la API en otro puerto y pasa `API_URL`:
 
 ```bash
 PORT=3100 cargo run
@@ -89,7 +65,7 @@ sqlx migrate run --database-url postgres://salon:salon@localhost:5432/salon
 ```bash
 cd backend  && cargo clippy --all-targets -- -D warnings && cargo test
 cd frontend && bunx --bun astro check && bunx --bun astro build
-curl http://localhost:3000/api/health
+curl http://localhost:8000/api/health
 ```
 
 ## Variables de entorno
@@ -98,7 +74,7 @@ curl http://localhost:3000/api/health
 | --- | --- | --- |
 | `DATABASE_URL` | Cadena de Postgres | `postgres://salon:salon@localhost:5432/salon` |
 | `JWT_SECRET` | Firma HS256 de la cookie (≥32 caracteres) | — (obligatoria en producción) |
-| `PORT` | Puerto de la API | `3000` |
+| `PORT` | Puerto de la API | `8000` |
 | `APP_ENV` | `development` / `production` | `development` |
 | `APP_ORIGIN` | Origen permitido para mutaciones y cookies seguras | `http://localhost:4321` |
 | `APP_TZ` | Zona horaria del salón | `America/Mexico_City` |
